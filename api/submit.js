@@ -1,50 +1,33 @@
 export default async function handler(req, res) {
-  // 1. Header untuk Mengatasi CORS (Penting!)
-  res.setHeader('Access-Control-Allow-Credentials', true);
+  // Header CORS agar browser tidak memblokir
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwANMw3WXCsKTweHzDZv9QOoGuc-XhhyhfFO9vuvBanj2UDh39RXXIl54IwHJW550X1/exec"; // <--- Pastikan URL /exec sudah benar
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwANMw3WXCsKTweHzDZv9QOoGuc-XhhyhfFO9vuvBanj2UDh39RXXIl54IwHJW550X1/exec";
 
-  // === LOGIKA UNTUK GET (Ambil Data) ===
-  if (req.method === 'GET') {
-    try {
-      // Mengambil parameter 'user' dari URL (misal: ?user=Budi)
-      const { user } = req.query;
-      const finalUrl = `${SCRIPT_URL}?user=${encodeURIComponent(user || '')}`;
-      
-      const response = await fetch(finalUrl);
-      const data = await response.json();
-      return res.status(200).json(data);
-    } catch (err) {
-      return res.status(500).json({ error: "Gagal ambil data: " + err.message });
-    }
-  }
-
-  // === LOGIKA UNTUK POST (Simpan Data) ===
-  if (req.method === 'POST') {
-    try {
+  try {
+    if (req.method === 'POST') {
+      // Kirim data ke Google
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req.body),
+        body: JSON.stringify(req.body) 
       });
-
-      const result = await response.json();
-      return res.status(200).json(result);
-    } catch (err) {
-      return res.status(500).json({ error: "Gagal simpan data: " + err.message });
+      const data = await response.json();
+      return res.status(200).json(data);
+    } 
+    
+    if (req.method === 'GET') {
+      const user = req.query.user || '';
+      const response = await fetch(`${SCRIPT_URL}?user=${encodeURIComponent(user)}`);
+      const data = await response.json();
+      return res.status(200).json(data);
     }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, error: error.message });
   }
-
-  res.status(405).json({ message: "Metode tidak diizinkan" });
 }
